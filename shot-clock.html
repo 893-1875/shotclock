@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Shot Clock</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 20px 0 40px;
+  }
+  body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 70%); z-index: -1; }
+  h1 { font-size: 1rem; letter-spacing: 0.4em; text-transform: uppercase; color: #888; margin-bottom: 36px; }
+  .menu-btn {
+    position: fixed; top: 18px; left: 20px; background: #1e1e2e; border: 1px solid #333; color: #aaa;
+    width: 40px; height: 40px; border-radius: 8px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    transition: all 0.15s; z-index: 200;
+  }
+  .menu-btn:hover { border-color: #555; color: #fff; }
+  .menu-btn span { display: block; width: 18px; height: 2px; background: currentColor; border-radius: 2px; transition: all 0.25s; }
+  .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu-btn.open span:nth-child(2) { opacity: 0; }
+  .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 150; }
+  .drawer-overlay.open { opacity: 1; pointer-events: all; }
+  .drawer {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #13131f;
+    border-right: 1px solid #2a2a3e; padding: 72px 24px 32px;
+    transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    z-index: 160; display: flex; flex-direction: column; gap: 28px;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-title { font-size: 0.65rem; letter-spacing: 0.35em; color: #444; text-transform: uppercase; }
+  .drawer-section { display: flex; flex-direction: column; gap: 16px; }
+  .drawer-section-title { font-size: 0.6rem; letter-spacing: 0.3em; color: #444; text-transform: uppercase; border-bottom: 1px solid #1e1e2e; padding-bottom: 6px; }
+  .drawer-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .drawer-label { font-size: 0.8rem; color: #888; }
+  .spinner { display: flex; align-items: center; border: 1px solid #333; border-radius: 6px; overflow: hidden; transition: opacity 0.2s; }
+  .spinner.locked { opacity: 0.35; pointer-events: none; }
+  .spinner-btn { background: #1e1e2e; border: none; color: #aaa; width: 32px; height: 38px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s; user-select: none; }
+  .spinner-btn:hover { background: #2a2a3e; color: #fff; }
+  .spinner-btn:active { background: #3b82f6; color: #fff; }
+  .spinner-val { background: #0d0d18; color: #fff; width: 52px; height: 38px; text-align: center; line-height: 38px; font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums; border-left: 1px solid #333; border-right: 1px solid #333; }
+  .settings-lock-msg { font-size: 0.62rem; letter-spacing: 0.1em; color: #ef4444; opacity: 0; transition: opacity 0.3s; text-align: center; min-height: 1em; }
+  .settings-lock-msg.visible { opacity: 1; }
+  .clock-container { position: relative; width: 300px; height: 300px; margin-bottom: 32px; }
+  .clock-svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .track { fill: none; stroke: #1e1e2e; stroke-width: 14; }
+  .progress { fill: none; stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
+  .clock-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .time-display { font-size: 5.5rem; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; transition: color 0.3s; }
+  .time-label { font-size: 0.65rem; letter-spacing: 0.3em; color: #555; margin-top: 6px; text-transform: uppercase; }
+  @keyframes warn-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.1);opacity:0} }
+  @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.4} 100%{transform:scale(1.08);opacity:0} }
+  .warn-ring { position: absolute; inset: -8px; border-radius: 50%; border: 3px solid #f59e0b; animation: warn-ring 1s ease-out infinite; display: none; }
+  .pulse-ring { position: absolute; inset: -10px; border-radius: 50%; border: 2px solid #ef4444; animation: pulse-ring 0.8s ease-out infinite; display: none; }
+  .state-warning .warn-ring { display: block; }
+  .state-danger .pulse-ring, .state-expired .pulse-ring { display: block; }
+  .warning-banner {
+    position: fixed; top: 0; left: 0; right: 0; background: #92400e;
+    border-bottom: 2px solid #f59e0b; color: #fcd34d; text-align: center;
+    font-size: 0.7rem; letter-spacing: 0.3em; text-transform: uppercase;
+    padding: 8px; transform: translateY(-100%); transition: transform 0.3s; z-index: 100;
+  }
+  .warning-banner.visible { transform: translateY(0); }
+  .timebank-info { display: flex; align-items: center; justify-content: center; gap: 32px; margin-bottom: 32px; }
+  .tb-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .tb-stat-label { font-size: 0.6rem; letter-spacing: 0.25em; color: #555; text-transform: uppercase; }
+  .tb-stat-value { font-size: 1.8rem; font-weight: 600; font-variant-numeric: tabular-nums; color: #888; }
+  .tb-stat-value.has-used { color: #ef4444; }
+  @keyframes bank-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .bank-active-badge { font-size: 0.6rem; letter-spacing: 0.2em; color: #f59e0b; text-transform: uppercase; display: none; margin-top: 2px; }
+  .bank-active .bank-active-badge { display: block; animation: bank-flash 0.7s infinite; }
+  .controls { display: flex; gap: 12px; margin-bottom: 32px; flex-wrap: wrap; justify-content: center; }
+  .btn { padding: 13px 26px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.15s; }
+  .btn-start { background: #3b82f6; color: #fff; min-width: 120px; }
+  .btn-start:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
+  .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-restart { background: #16a34a; color: #fff; min-width: 160px; border: 1px solid #22c55e; }
+  .btn-restart:hover { background: #15803d; transform: translateY(-1px); }
+  .btn-reset { background: #1e1e2e; color: #888; border: 1px solid #333; }
+  .btn-reset:hover { background: #2a2a3e; color: #fff; }
+  .state-idle .progress, .state-running .progress { stroke: #3b82f6; }
+  .state-warning .progress { stroke: #f59e0b; }
+  .state-danger .progress, .state-expired .progress { stroke: #ef4444; }
+  .state-bank-added .progress { stroke: #f59e0b; }
+  .state-warning .time-display { color: #f59e0b; }
+  .state-danger .time-display, .state-expired .time-display { color: #ef4444; }
+  .state-bank-added .time-display { color: #f59e0b; }
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.15} }
+  .state-expired .time-display { animation: flash 0.6s infinite; }
+  .sound-toggle { position: fixed; top: 18px; right: 20px; background: #1e1e2e; border: 1px solid #333; color: #888; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; letter-spacing: 0.1em; transition: all 0.15s; z-index: 200; }
+  .sound-toggle:hover { border-color: #555; color: #fff; }
+  .sound-toggle.on { color: #3b82f6; border-color: #3b82f6; }
+  .shortcuts { margin-top: 28px; font-size: 0.6rem; color: #3a3a4a; letter-spacing: 0.15em; text-align: center; line-height: 2; }
+</style>
+</head>
+<body>
+<div class="warning-banner" id="warningBanner">&#9888; 残り10秒</div>
+<button class="menu-btn" id="menuBtn" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeMenu()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-title">設定</div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">タイマー</div>
+    <div class="drawer-row">
+      <span class="drawer-label">Shot Clock（秒）</span>
+      <div class="spinner" id="shotSpinner">
+        <button class="spinner-btn" onclick="changeShot(-5)">&#8722;</button>
+        <div class="spinner-val" id="shotVal">30</div>
+        <button class="spinner-btn" onclick="changeShot(5)">+</button>
+      </div>
+    </div>
+    <div class="drawer-row">
+      <span class="drawer-label">Time Bank（秒/1回）</span>
+      <div class="spinner" id="bankSpinner">
+        <button class="spinner-btn" onclick="changeBank(-5)">&#8722;</button>
+        <div class="spinner-val" id="bankVal">30</div>
+        <button class="spinner-btn" onclick="changeBank(5)">+</button>
+      </div>
+    </div>
+    <div class="settings-lock-msg" id="lockMsg">&#9888; クロック動作中は変更できません</div>
+  </div>
+  <div class="drawer-section">
+    <div class="drawer-section-title">キーボード</div>
+    <div style="font-size:0.72rem;color:#555;line-height:2.2;letter-spacing:0.05em;">
+      <b style="color:#777">SPACE</b> &#8212; スタート / ポーズ<br>
+      <b style="color:#777">N</b> &#8212; リセット &amp; スタート<br>
+      <b style="color:#777">R</b> &#8212; リセット
+    </div>
+  </div>
+</div>
+<button class="sound-toggle on" id="soundToggle" onclick="toggleSound()">&#128266; SOUND</button>
+<h1>Shot Clock</h1>
+<div class="clock-container state-idle" id="clockContainer">
+  <div class="warn-ring"></div>
+  <div class="pulse-ring"></div>
+  <svg class="clock-svg" width="300" height="300" viewBox="0 0 300 300">
+    <circle class="track" cx="150" cy="150" r="136"/>
+    <circle class="progress" id="progressRing" cx="150" cy="150" r="136"/>
+  </svg>
+  <div class="clock-inner">
+    <div class="time-display" id="timeDisplay">30</div>
+    <div class="time-label" id="timeLabel">SECONDS</div>
+  </div>
+</div>
+<div class="timebank-info" id="timebankInfo">
+  <div class="tb-stat">
+    <div class="tb-stat-label">&#9889; Bank 使用回数</div>
+    <div class="tb-stat-value" id="bankUsedCount">0</div>
+    <div class="bank-active-badge">+ TIME BANK</div>
+  </div>
+</div>
+<div class="controls">
+  <button class="btn btn-start" id="startBtn" onclick="toggleClock()">START</button>
+  <button class="btn btn-restart" onclick="restartClock()">&#8635; RESET &amp; START</button>
+  <button class="btn btn-reset" onclick="resetClock()">RESET</button>
+</div>
+<div class="shortcuts">
+  SPACE: スタート/ポーズ &nbsp;|&nbsp; N: リセット&amp;スタート &nbsp;|&nbsp; R: リセット
+</div>
+<script>
+var audioCtx=null,soundEnabled=true;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function beep(f,d,v,t){if(!soundEnabled)return;f=f||440;d=d||0.1;v=v||0.3;t=t||'sine';try{var c=getAudio(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=f;o.type=t;g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+d);o.start(c.currentTime);o.stop(c.currentTime+d);}catch(e){}}
+function toggleSound(){soundEnabled=!soundEnabled;var b=document.getElementById('soundToggle');b.innerHTML=soundEnabled?'&#128266; SOUND':'&#128263; MUTED';b.className='sound-toggle'+(soundEnabled?' on':'');}
+var menuOpen=false;
+function toggleMenu(){menuOpen=!menuOpen;['menuBtn','drawer','drawerOverlay'].forEach(function(id){document.getElementById(id).classList.toggle('open',menuOpen);});}
+function closeMenu(){menuOpen=false;['menuBtn','drawer','drawerOverlay'].forEach(function(id){document.getElementById(id).classList.remove('open');});}
+
+var shotTime=30,bankTime=30,currentTime=30;
+var isRunning=false,bankUsedCount=0,justUsedBank=false;
+var interval=null,lockMsgTimer=null,bankBadgeTimer=null;
+var CIRC=2*Math.PI*136,ring=document.getElementById('progressRing');
+ring.style.strokeDasharray=CIRC;ring.style.strokeDashoffset=0;
+
+function showLockWarning(){var m=document.getElementById('lockMsg');m.classList.add('visible');clearTimeout(lockMsgTimer);lockMsgTimer=setTimeout(function(){m.classList.remove('visible');},2200);}
+function changeShot(d){if(isRunning){showLockWarning();return;}shotTime=Math.max(5,Math.min(300,shotTime+d));currentTime=shotTime;bankUsedCount=0;document.getElementById('shotVal').textContent=shotTime;updateDisplay();}
+function changeBank(d){if(isRunning){showLockWarning();return;}bankTime=Math.max(0,Math.min(300,bankTime+d));document.getElementById('bankVal').textContent=bankTime;}
+function setSpinnersLocked(l){document.getElementById('shotSpinner').classList.toggle('locked',l);document.getElementById('bankSpinner').classList.toggle('locked',l);}
+function setWarningBanner(v){document.getElementById('warningBanner').classList.toggle('visible',v);}
+
+function updateDisplay(){
+  var tEl=document.getElementById('timeDisplay');
+  var bC=document.getElementById('bankUsedCount');
+  var con=document.getElementById('clockContainer');
+  var tbI=document.getElementById('timebankInfo');
+  var sB=document.getElementById('startBtn');
+
+  tEl.textContent=Math.max(0,Math.ceil(currentTime));
+  bC.textContent=bankUsedCount;
+  bC.className='tb-stat-value'+(bankUsedCount>0?' has-used':'');
+  tbI.className='timebank-info'+(justUsedBank?' bank-active':'');
+
+  /* プログレスリング: バンク使用中はbankTimeを基準に満タン表示 */
+  var maxTime=bankUsedCount>0?bankTime:shotTime;
+  ring.style.strokeDashoffset=CIRC*(1-Math.max(0,Math.min(1,currentTime/maxTime)));
+
+  con.className='clock-container';
+  var expired=currentTime<=0&&!isRunning;
+  if(expired){con.classList.add('state-expired');setWarningBanner(false);}
+  else if(justUsedBank){con.classList.add('state-bank-added');setWarningBanner(false);}
+  else if(!isRunning){con.classList.add('state-idle');setWarningBanner(false);}
+  else if(currentTime<=5){con.classList.add('state-danger');setWarningBanner(true);}
+  else if(currentTime<=10){con.classList.add('state-warning');setWarningBanner(true);}
+  else{con.classList.add('state-running');setWarningBanner(false);}
+
+  sB.disabled=expired;
+  sB.textContent=isRunning?'PAUSE':(expired?'EXPIRED':'START');
+  setSpinnersLocked(isRunning);
+}
+
+function tick(){
+  currentTime-=1;
+  if(currentTime===10) beep(660,0.2,0.45);
+  else if(currentTime<10&&currentTime>0) beep(880,0.08,0.25);
+
+  if(currentTime<=0){
+    currentTime=0;
+    if(bankTime>0){
+      /* タイムバンク発動: 設定秒数をそのまま上乗せ */
+      currentTime=bankTime;
+      bankUsedCount++;
+      justUsedBank=true;
+      clearTimeout(bankBadgeTimer);
+      bankBadgeTimer=setTimeout(function(){justUsedBank=false;updateDisplay();},1200);
+      beep(550,0.12,0.3);
+      setTimeout(function(){beep(660,0.12,0.3);},150);
+      setTimeout(function(){beep(770,0.15,0.35);},300);
+      updateDisplay();return;
+    }else{
+      clearInterval(interval);isRunning=false;
+      setTimeout(function(){beep(660,0.15,0.4);},0);
+      setTimeout(function(){beep(660,0.15,0.4);},200);
+      setTimeout(function(){beep(440,0.4,0.5,'sawtooth');},400);
+      updateDisplay();return;
+    }
+  }
+  updateDisplay();
+}
+
+function toggleClock(){
+  if(currentTime<=0&&!isRunning)return;
+  if(isRunning){clearInterval(interval);isRunning=false;beep(330,0.1,0.2);}
+  else{isRunning=true;beep(550,0.1,0.2);interval=setInterval(tick,1000);}
+  updateDisplay();
+}
+function resetClock(){
+  clearInterval(interval);clearTimeout(bankBadgeTimer);
+  isRunning=false;justUsedBank=false;currentTime=shotTime;bankUsedCount=0;
+  setWarningBanner(false);beep(440,0.08,0.15);
+  ring.style.transition='none';ring.style.strokeDashoffset=0;
+  setTimeout(function(){ring.style.transition='stroke-dashoffset 1s linear, stroke 0.4s';updateDisplay();},50);
+}
+function restartClock(){
+  clearInterval(interval);clearTimeout(bankBadgeTimer);
+  isRunning=false;justUsedBank=false;currentTime=shotTime;bankUsedCount=0;
+  setWarningBanner(false);
+  ring.style.transition='none';ring.style.strokeDashoffset=0;
+  setTimeout(function(){
+    ring.style.transition='stroke-dashoffset 1s linear, stroke 0.4s';
+    isRunning=true;interval=setInterval(tick,1000);
+    beep(550,0.12,0.25);setTimeout(function(){beep(660,0.12,0.25);},120);
+    updateDisplay();
+  },50);
+}
+document.addEventListener('keydown',function(e){
+  if(e.code==='Space'){e.preventDefault();toggleClock();}
+  if(e.code==='KeyN')restartClock();
+  if(e.code==='KeyR')resetClock();
+  if(e.code==='Escape')closeMenu();
+});
+setTimeout(function(){ring.style.transition='stroke-dashoffset 1s linear, stroke 0.4s';updateDisplay();},100);
+</script>
+</body>
+</html>
