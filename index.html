@@ -4,158 +4,129 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <title>Poker Shot Clock</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { width: 100%; height: 100%; overflow: hidden; }
-  body {
-    background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif;
-    display: flex; align-items: center; justify-content: center;
-  }
+  body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
   body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0f 70%); z-index: -1; }
 
-  /* ── Hamburger ── */
-  .menu-btn {
-    position: fixed; top: 12px; left: 12px;
-    background: rgba(30,30,46,0.9); border: 1px solid #333; color: #aaa;
-    width: 38px; height: 38px; border-radius: 8px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    transition: all 0.15s; z-index: 200; touch-action: manipulation;
+  .warning-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #92400e; border-bottom: 2px solid #f59e0b; color: #fcd34d;
+    text-align: center; font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase;
+    padding: 6px; transform: translateY(-100%); transition: transform 0.3s; z-index: 100;
   }
-  .menu-btn:hover { border-color: #555; color: #fff; }
-  .menu-btn span { display: block; width: 16px; height: 2px; background: currentColor; border-radius: 2px; transition: all 0.25s; }
-  .menu-btn.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .warning-banner.visible { transform: translateY(0); }
+
+  .menu-btn {
+    position: fixed; top: 10px; left: 10px; z-index: 200;
+    background: rgba(20,20,32,0.95); border: 1px solid #333; color: #aaa;
+    width: 40px; height: 40px; border-radius: 8px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    touch-action: manipulation;
+  }
+  .menu-btn span { display: block; width: 17px; height: 2px; background: currentColor; border-radius: 2px; transition: all 0.25s; }
+  .menu-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   .menu-btn.open span:nth-child(2) { opacity: 0; }
-  .menu-btn.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .menu-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
   .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 150; }
   .drawer-overlay.open { opacity: 1; pointer-events: all; }
   .drawer {
-    position: fixed; top: 0; left: 0; bottom: 0; width: 260px; background: #13131f;
-    border-right: 1px solid #2a2a3e; padding: 64px 20px 24px;
+    position: fixed; top: 0; left: 0; bottom: 0; width: 270px;
+    background: #13131f; border-right: 1px solid #2a2a3e; padding: 68px 22px 28px;
     transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-    z-index: 160; display: flex; flex-direction: column; gap: 24px; overflow-y: auto;
+    z-index: 160; display: flex; flex-direction: column; gap: 26px; overflow-y: auto;
   }
   .drawer.open { transform: translateX(0); }
   .drawer-title { font-size: 0.6rem; letter-spacing: 0.35em; color: #444; text-transform: uppercase; }
   .drawer-section { display: flex; flex-direction: column; gap: 14px; }
   .drawer-section-title { font-size: 0.55rem; letter-spacing: 0.3em; color: #444; text-transform: uppercase; border-bottom: 1px solid #1e1e2e; padding-bottom: 5px; }
   .drawer-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .drawer-label { font-size: 0.75rem; color: #888; }
+  .drawer-label { font-size: 0.78rem; color: #888; }
   .spinner { display: flex; align-items: center; border: 1px solid #333; border-radius: 6px; overflow: hidden; transition: opacity 0.2s; }
-  .spinner.locked { opacity: 0.35; pointer-events: none; }
-  .spinner-btn {
-    background: #1e1e2e; border: none; color: #aaa; width: 36px; height: 40px;
-    font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: background 0.12s; user-select: none; touch-action: manipulation;
-  }
+  .spinner.locked { opacity: 0.3; pointer-events: none; }
+  .spinner-btn { background: #1e1e2e; border: none; color: #aaa; width: 38px; height: 42px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; user-select: none; touch-action: manipulation; }
   .spinner-btn:active { background: #3b82f6; color: #fff; }
-  .spinner-val { background: #0d0d18; color: #fff; width: 48px; height: 40px; text-align: center; line-height: 40px; font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; border-left: 1px solid #333; border-right: 1px solid #333; }
-  .settings-lock-msg { font-size: 0.58rem; letter-spacing: 0.08em; color: #ef4444; opacity: 0; transition: opacity 0.3s; text-align: center; }
+  .spinner-val { background: #0d0d18; color: #fff; width: 50px; height: 42px; text-align: center; line-height: 42px; font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums; border-left: 1px solid #333; border-right: 1px solid #333; }
+  .settings-lock-msg { font-size: 0.6rem; color: #ef4444; opacity: 0; transition: opacity 0.3s; text-align: center; }
   .settings-lock-msg.visible { opacity: 1; }
 
-  /* ── Sound toggle ── */
   .sound-toggle {
-    position: fixed; top: 12px; right: 12px;
-    background: rgba(30,30,46,0.9); border: 1px solid #333; color: #888;
-    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.7rem;
-    letter-spacing: 0.08em; transition: all 0.15s; z-index: 200; touch-action: manipulation;
+    position: fixed; top: 10px; right: 10px; z-index: 200;
+    background: rgba(20,20,32,0.95); border: 1px solid #333; color: #888;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.68rem; letter-spacing: 0.08em;
+    touch-action: manipulation;
   }
   .sound-toggle.on { color: #3b82f6; border-color: #3b82f6; }
 
-  /* ── Warning banner ── */
-  .warning-banner {
-    position: fixed; top: 0; left: 0; right: 0; background: #92400e;
-    border-bottom: 2px solid #f59e0b; color: #fcd34d; text-align: center;
-    font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase;
-    padding: 6px; transform: translateY(-100%); transition: transform 0.3s; z-index: 100;
-  }
-  .warning-banner.visible { transform: translateY(0); }
-
-  /* ── LANDSCAPE LAYOUT ── */
+  /* ── Layout: fixed grid ── */
   .layout {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    height: 100vh;
-    gap: 0;
-    padding: 8px 8px 8px 60px; /* left pad for hamburger */
+    position: fixed; inset: 0;
+    display: grid;
+    grid-template-columns: 45% 55%;
   }
 
-  /* Left: clock */
   .col-clock {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    /* padding: hamburger(left) + margin */
+    padding: 10px 8px 10px 58px;
   }
 
-  /* Right: info + controls */
-  .col-info {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: center;
-    gap: 12px;
-    flex: 1;
-    padding-left: 16px;
-    padding-right: 56px; /* right pad for sound toggle */
-    align-self: stretch;
-    padding-top: 12px;
-    padding-bottom: 12px;
-  }
+  /* clock-wrap size is set by JS */
+  .clock-wrap { position: relative; flex-shrink: 0; }
 
-  /* ── Clock ── */
-  .clock-container {
-    position: relative;
-    /* size driven by JS based on available height */
-    flex-shrink: 0;
-  }
-  .clock-svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
-  .track { fill: none; stroke: #1e1e2e; stroke-width: 12; }
-  .progress { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
+  .clock-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .track { fill: none; stroke: #1e1e2e; }
+  .progress { fill: none; stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
   .clock-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .time-display { font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; transition: color 0.3s; }
-  .time-label { letter-spacing: 0.3em; color: #555; margin-top: 4px; text-transform: uppercase; }
+  /* font sizes set by JS */
+  .time-display { font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; transition: color 0.3s; white-space: nowrap; }
+  .time-label { color: #555; text-transform: uppercase; white-space: nowrap; }
 
-  /* Rings */
-  @keyframes warn-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.1);opacity:0} }
-  @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.4} 100%{transform:scale(1.08);opacity:0} }
+  @keyframes warn-ring { 0%{transform:scale(1);opacity:0.7} 100%{transform:scale(1.12);opacity:0} }
+  @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.5} 100%{transform:scale(1.1);opacity:0} }
   .warn-ring { position: absolute; border-radius: 50%; border: 3px solid #f59e0b; animation: warn-ring 1s ease-out infinite; display: none; }
   .pulse-ring { position: absolute; border-radius: 50%; border: 2px solid #ef4444; animation: pulse-ring 0.8s ease-out infinite; display: none; }
   .state-warning .warn-ring { display: block; }
   .state-danger .pulse-ring, .state-expired .pulse-ring { display: block; }
 
-  /* ── Right-column content ── */
-  .app-title { font-size: 0.55rem; letter-spacing: 0.5em; text-transform: uppercase; color: #444; text-align: center; }
-
-  .timebank-info { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 10px; }
-  .tb-stat-label { font-size: 0.5rem; letter-spacing: 0.2em; color: #555; text-transform: uppercase; }
-  .tb-stat-value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #888; line-height: 1; }
-  .tb-stat-value.has-used { color: #ef4444; }
-  @keyframes bank-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .bank-active-badge { font-size: 0.55rem; letter-spacing: 0.2em; color: #f59e0b; text-transform: uppercase; display: none; margin-top: 2px; }
-  .bank-active .bank-active-badge { display: block; animation: bank-flash 0.7s infinite; }
-
-  /* ── Controls ── */
-  .controls { display: flex; flex-direction: column; gap: 8px; width: 100%; flex: 1; min-height: 0; }
-  .btn {
-    width: 100%; flex: 1; min-height: 52px;
-    border-radius: 14px; border: none; cursor: pointer;
-    font-size: 1rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-    transition: all 0.1s; touch-action: manipulation;
+  .col-info {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 10px 58px 10px 12px;
+    gap: 10px;
   }
-  .btn-start { background: #3b82f6; color: #fff; font-size: 1.3rem; flex: 1.4; }
-  .btn-start:active:not(:disabled) { background: #2563eb; transform: scale(0.97); }
-  .btn-start:disabled { opacity: 0.4; }
-  .btn-restart { background: #16a34a; color: #fff; border: 1px solid #22c55e; }
-  .btn-restart:active { background: #15803d; transform: scale(0.97); }
-  .btn-reset { background: #1e1e2e; color: #666; border: 1px solid #2a2a3e; font-size: 0.8rem; flex: 0.6; min-height: 40px; }
-  .btn-reset:active { background: #2a2a3e; color: #aaa; }
 
-  /* ── State colors ── */
+  .bank-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; background: rgba(255,255,255,0.03);
+    border-radius: 10px; border: 1px solid #1e1e2e; flex-shrink: 0;
+  }
+  .bank-icon { font-size: 1rem; }
+  .bank-label { font-size: 0.55rem; letter-spacing: 0.18em; color: #555; text-transform: uppercase; }
+  .bank-count { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #888; margin-left: auto; }
+  .bank-count.has-used { color: #ef4444; }
+  @keyframes bank-flash { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .bank-badge { font-size: 0.5rem; letter-spacing: 0.15em; color: #f59e0b; display: none; }
+  .bank-active .bank-badge { display: block; animation: bank-flash 0.7s infinite; }
+
+  .controls { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+
+  .btn {
+    flex: 1; width: 100%; border: none; border-radius: 14px; cursor: pointer;
+    font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    touch-action: manipulation; transition: filter 0.1s, transform 0.1s;
+    min-height: 44px;
+    /* font-size set by JS */
+  }
+  .btn:active { filter: brightness(0.85); transform: scale(0.97); }
+  .btn-start { background: #3b82f6; color: #fff; flex: 1.6; }
+  .btn-start:disabled { opacity: 0.35; }
+  .btn-restart { background: #16a34a; color: #fff; border: 1px solid #22c55e; }
+  .btn-reset { background: #1a1a28; color: #666; border: 1px solid #252535; flex: 0.7; }
+
+  /* State colors */
   .state-idle .progress, .state-running .progress { stroke: #3b82f6; }
   .state-warning .progress { stroke: #f59e0b; }
   .state-danger .progress, .state-expired .progress { stroke: #ef4444; }
@@ -163,20 +134,14 @@
   .state-warning .time-display { color: #f59e0b; }
   .state-danger .time-display, .state-expired .time-display { color: #ef4444; }
   .state-bank-added .time-display { color: #f59e0b; }
-  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.15} }
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.1} }
   .state-expired .time-display { animation: flash 0.6s infinite; }
 
-  /* Portrait fallback — vertical layout */
+  /* Portrait */
   @media (orientation: portrait) {
-    .layout {
-      flex-direction: column;
-      padding: 60px 16px 16px;
-      gap: 16px;
-    }
-    .col-info { padding: 0; align-self: auto; }
-    .controls { flex-direction: column; }
-    .btn { min-height: 60px; font-size: 1rem; }
-    .btn-start { font-size: 1.3rem; }
+    .layout { grid-template-columns: 100%; grid-template-rows: auto 1fr; }
+    .col-clock { padding: 58px 16px 8px; }
+    .col-info { padding: 8px 16px 16px; }
   }
 </style>
 </head>
@@ -209,43 +174,42 @@
   </div>
   <div class="drawer-section">
     <div class="drawer-section-title">キーボード</div>
-    <div style="font-size:0.7rem;color:#555;line-height:2.1;">
+    <div style="font-size:0.72rem;color:#555;line-height:2.2;">
       <b style="color:#666">SPACE</b> &#8212; スタート / ポーズ<br>
       <b style="color:#666">N</b> &#8212; リセット &amp; スタート<br>
       <b style="color:#666">R</b> &#8212; リセット
     </div>
   </div>
 </div>
-
 <button class="sound-toggle on" id="soundToggle" onclick="toggleSound()">&#128266; SOUND</button>
 
 <div class="layout">
-  <!-- Left: clock -->
-  <div class="col-clock">
-    <div class="clock-container state-idle" id="clockContainer">
-      <div class="warn-ring" id="warnRing"></div>
-      <div class="pulse-ring" id="pulseRing"></div>
-      <svg class="clock-svg" id="clockSvg" viewBox="0 0 300 300">
-        <circle class="track" id="trackCircle" cx="150" cy="150" r="136"/>
-        <circle class="progress" id="progressRing" cx="150" cy="150" r="136"/>
-      </svg>
-      <div class="clock-inner">
-        <div class="time-display" id="timeDisplay">30</div>
-        <div class="time-label" id="timeLabel">SECONDS</div>
+  <div class="col-clock" id="colClock">
+    <div class="clock-wrap" id="clockWrap">
+      <div class="clock-container state-idle" id="clockContainer" style="position:absolute;inset:0;">
+        <div class="warn-ring" id="warnRing"></div>
+        <div class="pulse-ring" id="pulseRing"></div>
+        <svg class="clock-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle class="track" id="trackCircle" cx="50" cy="50" r="45"/>
+          <circle class="progress" id="progressRing" cx="50" cy="50" r="45"/>
+        </svg>
+        <div class="clock-inner">
+          <div class="time-display" id="timeDisplay">30</div>
+          <div class="time-label" id="timeLabel">SECONDS</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Right: info + buttons -->
   <div class="col-info">
-    <div class="app-title">Shot Clock</div>
-
-    <div class="timebank-info" id="timebankInfo">
-      <div class="tb-stat-label">&#9889; Bank 使用回数</div>
-      <div class="tb-stat-value" id="bankUsedCount">0</div>
-      <div class="bank-active-badge">+ TIME BANK</div>
+    <div class="bank-row" id="bankRow">
+      <span class="bank-icon">&#9889;</span>
+      <div>
+        <div class="bank-label">Time Bank 使用回数</div>
+        <div class="bank-badge">+ TIME BANK</div>
+      </div>
+      <div class="bank-count" id="bankUsedCount">0</div>
     </div>
-
     <div class="controls">
       <button class="btn btn-start" id="startBtn" onclick="toggleClock()">START</button>
       <button class="btn btn-restart" onclick="restartClock()">&#8635; RESET &amp; START</button>
@@ -255,48 +219,67 @@
 </div>
 
 <script>
-/* ── Responsive clock sizing ── */
-function sizeClockToFit() {
-  var isLandscape = window.innerWidth > window.innerHeight;
-  var margin = isLandscape ? 64 : 56;
-  var availH = window.innerHeight - margin;
-  var availW = isLandscape ? window.innerWidth * 0.48 : window.innerWidth - 32;
-  var size = Math.min(availH, availW, isLandscape ? 360 : 300);
-  size = Math.max(size, 140);
+/* ── Resize: compute clock size and font sizes from actual pixel dimensions ── */
+var CIRC = 2 * Math.PI * 45; /* SVG viewBox r=45 */
+var ring = document.getElementById('progressRing');
+ring.style.strokeDasharray = CIRC;
+ring.style.strokeDashoffset = 0;
 
-  var con = document.getElementById('clockContainer');
-  var svg = document.getElementById('clockSvg');
-  con.style.width = size + 'px';
-  con.style.height = size + 'px';
-  svg.setAttribute('width', size);
-  svg.setAttribute('height', size);
+function resize() {
+  var col = document.getElementById('colClock');
+  var wrap = document.getElementById('clockWrap');
+  var cr = col.getBoundingClientRect();
 
-  var r = (size / 2) * 0.9;
-  var cx = size / 2, cy = size / 2;
-  var sw = Math.max(8, size * 0.04);
-  document.getElementById('trackCircle').setAttribute('cx', cx);
-  document.getElementById('trackCircle').setAttribute('cy', cy);
-  document.getElementById('trackCircle').setAttribute('r', r);
-  document.getElementById('trackCircle').style.strokeWidth = sw;
-  document.getElementById('progressRing').setAttribute('cx', cx);
-  document.getElementById('progressRing').setAttribute('cy', cy);
-  document.getElementById('progressRing').setAttribute('r', r);
-  document.getElementById('progressRing').style.strokeWidth = sw;
+  /* Available area inside the column */
+  var aw = cr.width;
+  var ah = cr.height;
+  /* Clock diameter = fit inside available box */
+  var size = Math.floor(Math.min(aw, ah));
+  size = Math.max(size, 80);
 
-  CIRC = 2 * Math.PI * r;
-  ring.style.strokeDasharray = CIRC;
+  wrap.style.width  = size + 'px';
+  wrap.style.height = size + 'px';
 
-  /* Rings */
-  var pad = sw * 0.7;
-  document.getElementById('warnRing').style.cssText = 'inset:-'+pad+'px;border-width:'+Math.max(2,sw*0.28)+'px';
-  document.getElementById('pulseRing').style.cssText = 'inset:-'+(pad+4)+'px;border-width:'+Math.max(2,sw*0.2)+'px';
+  /* Stroke width proportional to clock size (5% of diameter) */
+  var sw = Math.max(3, size * 0.05);
+  document.getElementById('trackCircle').style.strokeWidth = sw + 'px'; /* px in viewBox units: scale by 100/size */
+  /* SVG viewBox is 100x100, stroke-width in SVG units = sw * 100/size */
+  var svgSw = sw * 100 / size;
+  document.getElementById('trackCircle').setAttribute('stroke-width', svgSw);
+  document.getElementById('progressRing').setAttribute('stroke-width', svgSw);
 
-  /* Font sizes */
-  document.getElementById('timeDisplay').style.fontSize = Math.round(size * 0.32) + 'px';
-  document.getElementById('timeLabel').style.fontSize = Math.round(size * 0.052) + 'px';
+  /* Ring overlays */
+  var pad = sw * 0.5;
+  document.getElementById('warnRing').style.cssText  = 'inset:-' + (pad+2) + 'px; border-width:' + Math.max(2, sw*0.3) + 'px;';
+  document.getElementById('pulseRing').style.cssText = 'inset:-' + (pad+5) + 'px; border-width:' + Math.max(1.5, sw*0.22) + 'px;';
 
-  updateDisplay();
+  /* Font sizes: proportional to clock diameter */
+  document.getElementById('timeDisplay').style.fontSize = Math.round(size * 0.30) + 'px';
+  var lblSize = Math.round(size * 0.052);
+  var lblEl = document.getElementById('timeLabel');
+  lblEl.style.fontSize    = lblSize + 'px';
+  lblEl.style.marginTop   = Math.round(size * 0.03) + 'px';
+  /* letter-spacing trick: add text-indent = letter-spacing to center properly */
+  var ls = Math.round(lblSize * 0.35);
+  lblEl.style.letterSpacing = ls + 'px';
+  lblEl.style.textIndent    = ls + 'px';
+
+  /* Button font sizes proportional to available right-column height */
+  var btnH = document.getElementById('startBtn').getBoundingClientRect().height;
+  var btnFs = Math.max(12, Math.min(Math.round(btnH * 0.35), 28));
+  document.getElementById('startBtn').style.fontSize    = btnFs + 'px';
+  document.getElementById('startBtn').style.borderRadius = Math.round(btnH * 0.22) + 'px';
+  var btnFs2 = Math.max(11, Math.min(Math.round(btnH * 0.28), 22));
+  var rb = document.querySelector('.btn-restart');
+  rb.style.fontSize    = btnFs2 + 'px';
+  rb.style.borderRadius = Math.round(btnH * 0.22) + 'px';
+  var resetB = document.querySelector('.btn-reset');
+  resetB.style.fontSize    = Math.max(10, Math.round(btnFs2 * 0.82)) + 'px';
+  resetB.style.borderRadius = Math.round(btnH * 0.22) + 'px';
 }
+
+window.addEventListener('resize', function(){ resize(); });
+window.addEventListener('orientationchange', function(){ setTimeout(resize, 250); });
 
 /* ── Audio ── */
 var audioCtx=null,soundEnabled=true;
@@ -313,9 +296,6 @@ function closeMenu(){menuOpen=false;['menuBtn','drawer','drawerOverlay'].forEach
 var shotTime=30,bankTime=30,currentTime=30;
 var isRunning=false,bankUsedCount=0,justUsedBank=false;
 var interval=null,lockMsgTimer=null,bankBadgeTimer=null;
-var CIRC=2*Math.PI*136;
-var ring=document.getElementById('progressRing');
-ring.style.strokeDasharray=CIRC;ring.style.strokeDashoffset=0;
 
 function showLockWarning(){var m=document.getElementById('lockMsg');m.classList.add('visible');clearTimeout(lockMsgTimer);lockMsgTimer=setTimeout(function(){m.classList.remove('visible');},2200);}
 function changeShot(d){if(isRunning){showLockWarning();return;}shotTime=Math.max(5,Math.min(300,shotTime+d));currentTime=shotTime;bankUsedCount=0;document.getElementById('shotVal').textContent=shotTime;updateDisplay();}
@@ -327,13 +307,13 @@ function updateDisplay(){
   var tEl=document.getElementById('timeDisplay');
   var bC=document.getElementById('bankUsedCount');
   var con=document.getElementById('clockContainer');
-  var tbI=document.getElementById('timebankInfo');
+  var bankRow=document.getElementById('bankRow');
   var sB=document.getElementById('startBtn');
 
   tEl.textContent=Math.max(0,Math.ceil(currentTime));
   bC.textContent=bankUsedCount;
-  bC.className='tb-stat-value'+(bankUsedCount>0?' has-used':'');
-  tbI.className='timebank-info'+(justUsedBank?' bank-active':'');
+  bC.className='bank-count'+(bankUsedCount>0?' has-used':'');
+  bankRow.className='bank-row'+(justUsedBank?' bank-active':'');
 
   var maxTime=bankUsedCount>0?bankTime:shotTime;
   ring.style.strokeDashoffset=CIRC*(1-Math.max(0,Math.min(1,currentTime/maxTime)));
@@ -363,9 +343,7 @@ function tick(){
       clearTimeout(bankBadgeTimer);
       bankBadgeTimer=setTimeout(function(){justUsedBank=false;updateDisplay();},1200);
       beep(550,0.12,0.3);setTimeout(function(){beep(660,0.12,0.3);},150);setTimeout(function(){beep(770,0.15,0.35);},300);
-      /* メーター即時満タン */
-      ring.style.transition='none';
-      ring.style.strokeDashoffset=0;
+      ring.style.transition='none';ring.style.strokeDashoffset=0;
       setTimeout(function(){ring.style.transition='stroke-dashoffset 1s linear, stroke 0.4s';},50);
       updateDisplay();return;
     }else{
@@ -408,9 +386,8 @@ document.addEventListener('keydown',function(e){
   if(e.code==='Escape')closeMenu();
 });
 
-window.addEventListener('resize',sizeClockToFit);
-window.addEventListener('orientationchange',function(){setTimeout(sizeClockToFit,200);});
-setTimeout(sizeClockToFit,50);
+/* Initial render after layout settles */
+setTimeout(function(){ resize(); updateDisplay(); }, 100);
 </script>
 </body>
 </html>
